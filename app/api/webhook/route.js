@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { addLeadFromChatbot } from "@/lib/crm-store";
+import { getSession, saveSession, seenMessages } from "@/lib/whatsapp-sessions";
 
 /* ============================================================
    COACHING ENQUIRY BOT  (WhatsApp Cloud API + Next.js)
-   File: app/api/whatsapp/route.js
+   File: app/api/webhook/route.js
 
    ENV VARIABLES (.env.local)
    WHATSAPP_VERIFY_TOKEN     = any secret string you set in Meta dashboard
@@ -19,24 +21,14 @@ const OWNER_PHONE = process.env.OWNER_PHONE;
 const INSTITUTE = "Your Coaching Institute"; // <-- change this
 
 /* ------------------------------------------------------------
-   SESSION STORE
-   In-memory Map = fine for local testing / a single server.
-   On Vercel/serverless it can reset between requests, so for
-   production swap these 3 functions for Redis / Supabase /
-   MongoDB / Firebase.
+   SESSION + LEAD STORE
+   In-memory Maps live in lib/whatsapp-sessions.ts and lib/crm-store.ts.
+   Fine for local testing / a single server. On Vercel/serverless they
+   can reset between requests — swap for Redis / Supabase / MongoDB later.
 ------------------------------------------------------------ */
-const sessions = globalThis.__sessions || (globalThis.__sessions = new Map());
-const seenMessages = globalThis.__seen || (globalThis.__seen = new Set());
-
-async function getSession(phone) {
-  return sessions.get(phone) || null;
-}
-async function saveSession(phone, data) {
-  sessions.set(phone, { ...data, updatedAt: Date.now() });
-}
 async function saveLead(phone, lead) {
-  // TODO: store in your DB / Google Sheet / CRM here
-  console.log("📥 NEW LEAD:", phone, JSON.stringify(lead, null, 2));
+  const saved = addLeadFromChatbot({ phone, ...lead });
+  console.log("📥 NEW LEAD:", phone, JSON.stringify(saved, null, 2));
 }
 
 /* ------------------------------------------------------------
